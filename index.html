@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giám sát nhiệt độ - độ ẩm</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <form>
+      <h1 id="nhietdo">-- °C</h1>
+      <h2 id="doam">-- %</h2>
+    </form>
+
+    <form>
+      <img id="fan" class="fan_img" src="img/fan_off.png" alt="Quạt">
+      <button type="button" id="btn1" class="btn waves-effect">On</button>
+      <button type="button" id="btn2" class="btn waves-effect">Off</button>
+      <br><br>
+      <label>This website make by CR7 Team</label><br>
+      <label>Pham Gia Huy</label><br>
+      <label>Truong Thanh An</label>
+    </form>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/8.2.10/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.2.10/firebase-database.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBwUoBlPteHqIV-Uwiynuz7bf5jhf9du80",
+      authDomain: "dht22-4a670.firebaseapp.com",
+      databaseURL: "https://dht22-4a670-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "dht22-4a670",
+      storageBucket: "dht22-4a670.firebasestorage.app",
+      messagingSenderId: "931127044212",
+      appId: "1:931127044212:web:9ca9247b9f1baa61204921"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const nhietDo = document.getElementById('nhietdo');
+    const doAm = document.getElementById('doam');
+    const fan = document.getElementById('fan');
+
+    db.ref('Nhiet do').on('value', snap => {
+      nhietDo.innerText = (snap.val() ?? '--') + ' °C';
+    });
+    db.ref('Do am').on('value', snap => {
+      doAm.innerText = (snap.val() ?? '--') + ' %';
+    });
+
+
+    document.getElementById('btn1').onclick = () => db.ref('Quat').set(1);
+    document.getElementById('btn2').onclick = () => db.ref('Quat').set(0);
+
+
+    db.ref('Quat').on('value', snap => {
+      fan.src = snap.val() == 1 ? 'img/fan_on.jpg' : 'img/fan_off.png';
+    });
+  </script>
+</body>
+</html>
