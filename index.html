@@ -1,65 +1,322 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Giám sát nhiệt độ - độ ẩm</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-  <link rel="stylesheet" href="./style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Giám sát nhiệt độ - độ ẩm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eaf0ef;
+    --surface: #ffffff;
+    --ink: #10302e;
+    --muted: #5e7573;
+    --line: #d5e0de;
+    --temp: #e4572e;
+    --hum: #1f7ae0;
+    --ok: #1a9d6a;
+    --bad: #c0392b;
+    --shadow: 0 1px 2px rgba(16,48,46,.06), 0 8px 24px rgba(16,48,46,.06);
+    /* Ảnh nền: đổi đường dẫn ở đây */
+    --bg-image: url("img/background.jpg");
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0c1a19;
+      --surface: #132625;
+      --ink: #e6f1ef;
+      --muted: #8fa9a6;
+      --line: #234240;
+      --temp: #ff7a52;
+      --hum: #5aa2ff;
+      --ok: #3ecf94;
+      --bad: #ff6b5b;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg);
+    
+    background-image:
+      linear-gradient(color-mix(in srgb, var(--bg) 60%, transparent), color-mix(in srgb, var(--bg) 60%, transparent)),
+      var(--bg-image);
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 40px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -.01em; }
+  header p { color: var(--muted); font-size: .85rem; }
+  .status {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+    font-size: .8rem; font-weight: 500; white-space: nowrap;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+  .status.online .dot { background: var(--ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 25%, transparent); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card {
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    border: 1px solid var(--line);
+    border-radius: 18px; padding: 20px; box-shadow: var(--shadow);
+  }
+  .label { font-size: .85rem; color: var(--muted); font-weight: 500; }
+  .value {
+    font-size: clamp(2.8rem, 9vw, 4.2rem); font-weight: 700; line-height: 1.05;
+    letter-spacing: -.03em; font-variant-numeric: tabular-nums; margin: 6px 0 14px;
+  }
+  .value small { font-size: .38em; font-weight: 500; color: var(--muted); margin-left: 4px; letter-spacing: 0; }
+  .temp .value { color: var(--temp); }
+  .hum .value { color: var(--hum); }
+  .bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: 99px; transition: width .6s ease; }
+  .temp .bar i { background: var(--temp); }
+  .hum .bar i { background: var(--hum); }
+  .scale { display: flex; justify-content: space-between; margin-top: 6px; font-size: .72rem; color: var(--muted); }
+
+  .chart-card { margin-top: 16px; }
+  .card-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; flex-wrap: wrap; gap: 4px; }
+  .card-head h2 { font-size: 1.05rem; font-weight: 600; }
+  .chart-wrapper { position: relative; height: 320px; }
+
+  .fan-card { margin-top: 16px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .fan-icon { flex: none; color: var(--muted); transition: color .3s; }
+  .fan-icon svg { width: 84px; height: 84px; display: block; transform-origin: 50% 50%; }
+  .fan-card.on .fan-icon { color: var(--hum); }
+  .fan-card.on .fan-icon svg { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .fan-info { flex: 1; min-width: 140px; }
+  .fan-info h2 { font-size: 1.05rem; font-weight: 600; }
+  .fan-info p { color: var(--muted); font-size: .9rem; }
+  .seg { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
+  .seg button {
+    font: inherit; font-weight: 600; font-size: .95rem; border: 0; cursor: pointer;
+    padding: 10px 26px; border-radius: 9px; background: transparent; color: var(--muted);
+    transition: background .2s, color .2s;
+  }
+  .seg button:hover { color: var(--ink); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+  .seg button:focus-visible { outline: 3px solid var(--hum); outline-offset: 2px; }
+
+  footer { margin-top: 28px; text-align: center; color: var(--muted); font-size: .8rem; }
+  footer strong { color: var(--ink); font-weight: 600; }
+
+  @media (max-width: 560px) {
+    .grid { grid-template-columns: 1fr; }
+    .chart-wrapper { height: 260px; }
+    .seg { width: 100%; }
+    .seg button { flex: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fan-card.on .fan-icon svg { animation: none; }
+    .bar i { transition: none; }
+  }
+</style>
 </head>
 <body>
-  <main>
-    <form>
-      <h1 id="nhietdo">-- °C</h1>
-      <h2 id="doam">-- %</h2>
-    </form>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Giám sát nhiệt độ &amp; độ ẩm</h1>
+      <p id="updated">Đang chờ dữ liệu…</p>
+    </div>
+    <div class="status" id="status"><span class="dot"></span><span id="statusText">Mất kết nối</span></div>
+  </header>
 
-    <form>
-      <img id="fan" class="fan_img" src="img/fan_off.png" alt="Quạt">
-      <button type="button" id="btn1" class="btn waves-effect">On</button>
-      <button type="button" id="btn2" class="btn waves-effect">Off</button>
-      <br><br>
-      <label>This website make by CR7 Team</label><br>
-      <label>Pham Gia Huy</label><br>
-      <label>Truong Thanh An</label>
-    </form>
-  </main>
+  <section class="grid" aria-label="Số đo hiện tại">
+    <div class="card temp">
+      <div class="label">Nhiệt độ</div>
+      <div class="value"><span id="nhietdo">--</span><small>°C</small></div>
+      <div class="bar"><i id="tempBar"></i></div>
+      <div class="scale"><span>0°C</span><span>50°C</span></div>
+    </div>
+    <div class="card hum">
+      <div class="label">Độ ẩm</div>
+      <div class="value"><span id="doam">--</span><small>%</small></div>
+      <div class="bar"><i id="humBar"></i></div>
+      <div class="scale"><span>0%</span><span>100%</span></div>
+    </div>
+  </section>
 
-  <script src="https://www.gstatic.com/firebasejs/8.2.10/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.2.10/firebase-database.js"></script>
+  <section class="card chart-card" aria-label="Biểu đồ">
+    <div class="card-head">
+      <h2>Biểu đồ theo thời gian</h2>
+      <span class="label">15 điểm gần nhất</span>
+    </div>
+    <div class="chart-wrapper"><canvas id="sensorChart"></canvas></div>
+  </section>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBwUoBlPteHqIV-Uwiynuz7bf5jhf9du80",
-      authDomain: "dht22-4a670.firebaseapp.com",
-      databaseURL: "https://dht22-4a670-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "dht22-4a670",
-      storageBucket: "dht22-4a670.firebasestorage.app",
-      messagingSenderId: "931127044212",
-      appId: "1:931127044212:web:9ca9247b9f1baa61204921"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+  <section class="card fan-card" id="fanCard" aria-label="Điều khiển quạt">
+    <div class="fan-icon" aria-hidden="true">
+      <svg id="fanSvg" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="3" opacity=".35"/>
+        <g class="blades" fill="currentColor">
+          <path id="blade" d="M50 46 C40 38 36 22 42 12 C50 6 60 12 58 26 C57 34 54 41 50 46 Z"/>
+          <use href="#blade" transform="rotate(120 50 50)"/>
+          <use href="#blade" transform="rotate(240 50 50)"/>
+        </g>
+        <circle cx="50" cy="50" r="7" fill="currentColor"/>
+        <circle cx="50" cy="50" r="2.5" fill="var(--surface)"/>
+      </svg>
+    </div>
+    <div class="fan-info">
+      <h2>Quạt</h2>
+      <p id="fanText">Đang tắt</p>
+    </div>
+    <div class="seg" role="group" aria-label="Bật tắt quạt">
+      <button type="button" id="btn1" aria-pressed="false">Bật</button>
+      <button type="button" id="btn2" aria-pressed="true">Tắt</button>
+    </div>
+  </section>
 
-    const nhietDo = document.getElementById('nhietdo');
-    const doAm = document.getElementById('doam');
-    const fan = document.getElementById('fan');
+  <footer>
+    Website thực hiện bởi <strong>CR7 Team</strong><br>
+    Pham Gia Huy · Truong Thanh An
+  </footer>
+</div>
 
-    db.ref('Nhiet do').on('value', snap => {
-      nhietDo.innerText = (snap.val() ?? '--') + ' °C';
-    });
-    db.ref('Do am').on('value', snap => {
-      doAm.innerText = (snap.val() ?? '--') + ' %';
-    });
+<script src="https://www.gstatic.com/firebasejs/8.2.10/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.2.10/firebase-database.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBwUoBlPteHqIV-Uwiynuz7bf5jhf9du80",
+    authDomain: "dht22-4a670.firebaseapp.com",
+    databaseURL: "https://dht22-4a670-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "dht22-4a670",
+    storageBucket: "dht22-4a670.firebasestorage.app",
+    messagingSenderId: "931127044212",
+    appId: "1:931127044212:web:9ca9247b9f1baa61204921"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
+  const $ = id => document.getElementById(id);
+  const nhietDo = $('nhietdo'), doAm = $('doam');
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
-    document.getElementById('btn1').onclick = () => db.ref('Quat').set(1);
-    document.getElementById('btn2').onclick = () => db.ref('Quat').set(0);
+  // ---- Biểu đồ ----
+  const maxDataPoints = 15;
+  const tempColor = css('--temp'), humColor = css('--hum');
+  Chart.defaults.font.family = '"Be Vietnam Pro", system-ui, sans-serif';
+  Chart.defaults.color = css('--muted');
 
+  const sensorChart = new Chart($('sensorChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label: 'Nhiệt độ (°C)', data: [], borderColor: tempColor, backgroundColor: tempColor + '22',
+          borderWidth: 2.5, fill: true, tension: .35, pointRadius: 3, pointHoverRadius: 6, yAxisID: 'yTemp' },
+        { label: 'Độ ẩm (%)', data: [], borderColor: humColor, backgroundColor: humColor + '22',
+          borderWidth: 2.5, fill: true, tension: .35, pointRadius: 3, pointHoverRadius: 6, yAxisID: 'yHum' }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, padding: 16 } },
+        tooltip: { padding: 10, cornerRadius: 8 }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 6 } },
+        yTemp: {
+          type: 'linear', position: 'left', suggestedMin: 20, suggestedMax: 45,
+          ticks: { color: tempColor }, grid: { color: css('--line') },
+          title: { display: true, text: '°C', color: tempColor }
+        },
+        yHum: {
+          type: 'linear', position: 'right', suggestedMin: 30, suggestedMax: 100,
+          ticks: { color: humColor }, grid: { drawOnChartArea: false },
+          title: { display: true, text: '%', color: humColor }
+        }
+      }
+    }
+  });
 
-    db.ref('Quat').on('value', snap => {
-      fan.src = snap.val() == 1 ? 'img/fan_on.jpg' : 'img/fan_off.png';
-    });
-  </script>
+  let currentTemp = null, currentHum = null, chartTimer = null;
+
+  function stamp() {
+    const t = new Date().toLocaleTimeString('vi-VN');
+    $('updated').textContent = 'Cập nhật lúc ' + t;
+    return t;
+  }
+
+  function pushDataToChart() {
+    if (currentTemp === null && currentHum === null) return;
+    const timeStr = stamp();
+    const d = sensorChart.data;
+    if (d.labels.length >= maxDataPoints) {
+      d.labels.shift(); d.datasets[0].data.shift(); d.datasets[1].data.shift();
+    }
+    d.labels.push(timeStr);
+    d.datasets[0].data.push(currentTemp);
+    d.datasets[1].data.push(currentHum);
+    sensorChart.update();
+  }
+
+  function scheduleChartUpdate() {
+    clearTimeout(chartTimer);
+    // Gom thay đổi trong 250ms để đồng bộ mốc thời gian khi cả 2 thông số đổi cùng lúc
+    chartTimer = setTimeout(pushDataToChart, 250);
+  }
+
+  const pct = (v, max) => Math.max(0, Math.min(100, (v / max) * 100)) + '%';
+
+  // ---- Cảm biến ----
+  db.ref('Nhiet do').on('value', snap => {
+    const val = snap.val();
+    nhietDo.textContent = val ?? '--';
+    if (val !== null && val !== undefined) {
+      currentTemp = Number(val);
+      $('tempBar').style.width = pct(currentTemp, 50);
+      scheduleChartUpdate();
+    }
+  });
+
+  db.ref('Do am').on('value', snap => {
+    const val = snap.val();
+    doAm.textContent = val ?? '--';
+    if (val !== null && val !== undefined) {
+      currentHum = Number(val);
+      $('humBar').style.width = pct(currentHum, 100);
+      scheduleChartUpdate();
+    }
+  });
+
+  // ---- Quạt ----
+  $('btn1').onclick = () => db.ref('Quat').set(1);
+  $('btn2').onclick = () => db.ref('Quat').set(0);
+
+  db.ref('Quat').on('value', snap => {
+    const on = snap.val() == 1;
+    $('fanCard').classList.toggle('on', on);
+    $('fanText').textContent = on ? 'Đang chạy' : 'Đang tắt';
+    $('btn1').setAttribute('aria-pressed', on);
+    $('btn2').setAttribute('aria-pressed', !on);
+  });
+
+  // ---- Trạng thái kết nối Firebase ----
+  db.ref('.info/connected').on('value', snap => {
+    const online = snap.val() === true;
+    $('status').classList.toggle('online', online);
+    $('statusText').textContent = online ? 'Đã kết nối' : 'Mất kết nối';
+  });
+</script>
 </body>
 </html>
