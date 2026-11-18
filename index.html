@@ -21,27 +21,14 @@
     --shadow: 0 1px 2px rgba(16,48,46,.06), 0 8px 24px rgba(16,48,46,.06);
     /* Ảnh nền: đổi đường dẫn ở đây */
     --bg-image: url("img/background.jpg");
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0c1a19;
-      --surface: #132625;
-      --ink: #e6f1ef;
-      --muted: #8fa9a6;
-      --line: #234240;
-      --temp: #ff7a52;
-      --hum: #5aa2ff;
-      --ok: #3ecf94;
-      --bad: #ff6b5b;
-      --shadow: none;
-    }
+    color-scheme: light;
   }
   * { box-sizing: border-box; margin: 0; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     font-family: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     background-color: var(--bg);
-    
+    /* lớp phủ nhạt giúp chữ dễ đọc, ảnh nền nằm bên dưới */
     background-image:
       linear-gradient(color-mix(in srgb, var(--bg) 60%, transparent), color-mix(in srgb, var(--bg) 60%, transparent)),
       var(--bg-image);
@@ -68,7 +55,7 @@
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .card {
-    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
     -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
     border: 1px solid var(--line);
     border-radius: 18px; padding: 20px; box-shadow: var(--shadow);
@@ -93,11 +80,8 @@
   .chart-wrapper { position: relative; height: 320px; }
 
   .fan-card { margin-top: 16px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-  .fan-icon { flex: none; color: var(--muted); transition: color .3s; }
-  .fan-icon svg { width: 84px; height: 84px; display: block; transform-origin: 50% 50%; }
-  .fan-card.on .fan-icon { color: var(--hum); }
-  .fan-card.on .fan-icon svg { animation: spin .8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .fan-icon { flex: none; }
+  .fan_img { display: block; width: auto; height: auto; max-width: 120px; max-height: 120px; }
   .fan-info { flex: 1; min-width: 140px; }
   .fan-info h2 { font-size: 1.05rem; font-weight: 600; }
   .fan-info p { color: var(--muted); font-size: .9rem; }
@@ -121,12 +105,19 @@
     .seg button { flex: 1; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .fan-card.on .fan-icon svg { animation: none; }
     .bar i { transition: none; }
   }
 </style>
 </head>
 <body>
+<!-- ================= CẤU HÌNH ẢNH NỀN: sửa tên file ở đây ================= -->
+<script>
+  const CONFIG = {
+    background: "img/background.jpg"  // ảnh nền (đổi tên file ở đây)
+  };
+</script>
+<!-- ===================================================================== -->
+
 <div class="wrap">
   <header>
     <div>
@@ -160,17 +151,8 @@
   </section>
 
   <section class="card fan-card" id="fanCard" aria-label="Điều khiển quạt">
-    <div class="fan-icon" aria-hidden="true">
-      <svg id="fanSvg" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="3" opacity=".35"/>
-        <g class="blades" fill="currentColor">
-          <path id="blade" d="M50 46 C40 38 36 22 42 12 C50 6 60 12 58 26 C57 34 54 41 50 46 Z"/>
-          <use href="#blade" transform="rotate(120 50 50)"/>
-          <use href="#blade" transform="rotate(240 50 50)"/>
-        </g>
-        <circle cx="50" cy="50" r="7" fill="currentColor"/>
-        <circle cx="50" cy="50" r="2.5" fill="var(--surface)"/>
-      </svg>
+    <div class="fan-icon">
+      <img id="fan" class="fan_img" alt="Quạt">
     </div>
     <div class="fan-info">
       <h2>Quạt</h2>
@@ -205,6 +187,7 @@
   const db = firebase.database();
 
   const $ = id => document.getElementById(id);
+  document.documentElement.style.setProperty('--bg-image', `url("${CONFIG.background}")`);
   const nhietDo = $('nhietdo'), doAm = $('doam');
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
@@ -303,8 +286,17 @@
   $('btn1').onclick = () => db.ref('Quat').set(1);
   $('btn2').onclick = () => db.ref('Quat').set(0);
 
+  // Ảnh quạt nhúng sẵn trong code (không cần file ngoài)
+  const FAN = {
+    on: "data:image/webp;base64,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",
+    off: "data:image/webp;base64,UklGRgAFAABXRUJQVlA4IPQEAAAQIgCdASqgAKAAPm0wlEYkIyIhKzM7sIANiWkA1Uipt0WgxvIHHx2h53wn05bUJs7qb7Vi4c3ZhK16rZPPsurhh9KPnh5flv2Rg806/k1v61XmsRJS57kKsjO89OIDncYIQn6g/81BHjXfoz2lBrtUbCPJNZfr4C9nOnB7UiobYIlllk43iIXTwFEKlIdFwZ4682UEqIWukFSSH0DT2ibcL0eb6HY8cVIMNOBY9ZW6qgYuy0ebpqSVyOTmhFyx3rJ1X5F6XWZBlxndUHSqn9DKU9oFfPkoqvHqwcmQ2SiVlVnsr4yqspD5WWb67R5b9RwpJ059qfAr0HU3gz+G0HjVBaL//SbmZR8kCiC1DHL0PEife61cFCBMAAD+/KgEteqwUnxZoBk68qDafwdrSJNlgw+d6ZqSlDzkpTXl7l1wQ2izJ0fGLLq+rK5jWPrnNWGgNLsW87dyf7rGgFDKkBadCGzaB6z/TWai8b9xn5Lceo5cpFfDXn6DhjvZ94+p5CJ20XIScd8XRn3EU8t1poa1OXgB0Rd+tglJnOnKW6Kk4rY0P0raigE0ogRbU2/uWkxOdVLwuOzB26I05x6aoloYvI/Vi89ss+sfdfkAx5UM8/eBskosD5uta8A8luVnLbfa/WcSTlJtBUPcD8Fgo36dFvUNHvmzSZz7pC5gBskBimJtULHZr81UpnJPzyv2pW/ondGfzs6fys9R3F89g6bTlnKotz2pPfgeRZqSQf1nGVqQ+KKVk7Pw+jzmQ55D8aKYWw2cqXXWFTdrxhWGIFGGd42wctIagZ9Cu7hv5hP2rJvK4HrXE65Ku0hxBn71MF4g55v9Y2soYlGA7BPxL93YYVTN0zCgn0pxr1KxFkoUEyL80AF7MpJEmvDW9IHAzVQA0lpuaxl0VzO8TUU2keyM0SqyEVkfCG5TjGy8FLBR/KX34ceIQsjJAbU+AG7H3gQY0/Ho4TLxLggBVMnGA5QYfDs7AK3jzCUTM30dnI25uoznkLiRyxDW86JXeppU8Zdut4HJTcfUAMGLtJ4OZBRVdD9Zmml8g5cBOM354nHh2vn+Z+e1QM19F4RuBNq/nClaXPtvsUOqY+ZzakWwX+qXkazarHt7GFpuXK7jtWfWysLAwFaQ0dig2NUzh2bhdlikbjGFotnynXg4BGnm4koHw+L81HUbriaRKeWDR8BfHB74wzh4+Frw8gkd0IIChT6t418RtzP2kxIZa2rHqOWoNCtF8mcxG2+okk7SJiETqpnpNORzgCPpkxi9Nb19JQoKqW3szuvKUUJrlooVGeUZPjuCBTTrAtSwqkJDl99VWZcCDu3K+FRb4Dwn62aLgVq5YCfDru9S88MiJdo3BnWkfI1aKmYv9VbVO0huNLZY7zjUXDKL0pU6758gAm1vCggcRcyJr48KnRX+QL9UhYxrLvwqxnFjhdmYHww0yE5qNKr7SWkWWO/Ne9CkEwgCkmv2EOrG+xHGNQL8bwhw8UaAVGre2taeztOKpxdWDhoSKGTyZiQtg0YymvGYooKrbObbv335Sv4l4sTFmgpld0aW2uit3hTIoqkVOwyDJTHlnZdsLD3npQrz4jdiJh0uqOlT8xoEBKIhyEomCTj9S6OEZBORsBQirf6O2gcgvEibnE9HACTBW1ILVgRgYroF7AanMoI6q71MCFX49LIlKHteAqAAAA=="
+  };
+  const fanImg = $('fan');
+  fanImg.src = FAN.off;
+
   db.ref('Quat').on('value', snap => {
     const on = snap.val() == 1;
+    fanImg.src = on ? FAN.on : FAN.off;
     $('fanCard').classList.toggle('on', on);
     $('fanText').textContent = on ? 'Đang chạy' : 'Đang tắt';
     $('btn1').setAttribute('aria-pressed', on);
